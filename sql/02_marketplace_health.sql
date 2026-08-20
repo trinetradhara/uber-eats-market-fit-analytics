@@ -250,7 +250,7 @@ WITH restaurant_orders AS (
     SELECT SUM(orders) AS total_orders FROM restaurant_orders
 )
 SELECT
-    ROUND(SUM(r.orders) FILTER (WHERE r.volume_rank <= 10) * 100.0 / t.total_orders, 2) AS top_10_restaurant_order_share_pct,
+    ROUND(SUM(r.orders) FILTER (WHERE r.volume_rank <= 10) * 100.0 / CAST(MAX(t.total_orders) AS DOUBLE), 2) AS top_10_restaurant_order_share_pct,
     MEDIAN(r.orders) AS restaurant_median_orders,
     COUNT(*) AS ordering_restaurant_count
 FROM ranked r
