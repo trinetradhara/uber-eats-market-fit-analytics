@@ -1,102 +1,229 @@
-# Synthetic Uber Eats Product Analytics Dataset
+# Uber Eats Marketplace & Product Analytics
 
-This project will generate a reproducible relational dataset for SQL and Product Analytics analysis of marketplace scale, retention, restaurant supply, delivery reliability, promotions, and contribution margin across India, USA, Australia, the UK, and Japan.
+An end-to-end SQL analytics project analyzing a synthetic Uber Eats marketplace across customers, restaurants, deliveries, promotions, retention, customer experience, and unit economics.
 
-The generator is intentionally scaffolded first. It does **not** currently generate the target 500,000 orders or write CSV datasets.
+The project combines marketplace analytics with product-oriented root cause analysis to identify operational and economic opportunities.
 
-## Objective
+---
 
-Support analysis of why Uber Eats achieved sustainable scale in some markets but may have failed to establish itself in India. The data-generating process introduces market, city, user, restaurant, partner, and operational variation without hard-coding a market ranking or conclusion.
+## Business Objective
 
-## Project Structure
+The objective is to understand marketplace health and identify the major drivers of:
 
-- `src/config.py`: centralized scale, dates, seed, market priors, and edge-case rates
-- `src/rng.py`: reproducible module-specific NumPy streams
-- `src/schemas.py`: contracts for the 16 required CSV tables and controlled vocabularies
-- `src/markets.py`: markets and cities
-- `src/entities.py`: users, addresses, restaurants, and delivery partners
-- `src/behavior.py`: internal user behavior profiles
-- `src/availability.py`: restaurant availability
-- `src/orders.py`: chunked order generation
-- `src/delivery.py`: delivery event state machine
-- `src/experience.py`: ratings, issues, and refunds
-- `src/promotions.py`: promotions and redemptions
-- `src/finance.py`: order-level financials
-- `src/optional_tables.py`: deferred optional tables
-- `src/validation.py`: schema and integrity checks
-- `src/export.py`: CSV output helpers
-- `src/main.py`: planned orchestration order; no large-scale execution yet
+- Customer engagement and retention
+- Delivery reliability
+- Restaurant performance
+- Customer satisfaction
+- Promotion effectiveness
+- Contribution margin
+- Negative-margin orders
 
-Stage 2 also persists internal latent profiles, separate from raw table schemas:
+The analysis moves from descriptive marketplace diagnostics toward evidence-based root cause analysis and business recommendations.
 
-- `data/processed/user_profiles.parquet`
-- `data/processed/restaurant_profiles.parquet`
-- `data/processed/partner_profiles.parquet`
+---
 
-These artifacts use `entity_id` plus latent behavioral, popularity, reliability, and operational variables. They are loaded by future stages through `load_user_profiles()` and `load_entity_profiles()` and are regenerated deterministically from the master seed.
+## Dataset
 
-## Required Tables
+The project uses a synthetic Uber Eats-style dataset representing:
 
-The schema registry defines these exact table names and the complete column-by-column contracts from the source specification:
+- 500,000 orders
+- 5 markets
+- Approximately 8–12 months of marketplace activity
+- Customers
+- Restaurants
+- Orders
+- Delivery events
+- Ratings
+- Issues and refunds
+- Promotions and redemptions
+- Order-level financials
 
-`markets`, `cities`, `users`, `restaurants`, `delivery_partners`, `addresses`, `orders`, `order_items`, `delivery_events`, `restaurant_availability`, `ratings`, `order_issues`, `refunds`, `promotions`, `order_promotions`, and `order_financials`.
+The dataset was generated specifically for analytics practice and portfolio demonstration. It should not be interpreted as real Uber Eats operational data.
 
-Delivery events use the required event types: `ORDER_PLACED`, `RESTAURANT_ACCEPTED`, `PREPARATION_STARTED`, `PARTNER_REQUESTED`, `PARTNER_ASSIGNED`, `PARTNER_ARRIVED`, `ORDER_PICKED_UP`, `ORDER_DELIVERED`, and `ORDER_CANCELLED`.
+---
 
-Latent behavioral values live in internal generator state and are not added to final CSV tables unless later approved as schema columns.
+## Analytical Framework
 
-Nullable fields are represented with pandas nullable dtypes in the contract registry. The SQL type registry preserves the specified `INT`, `BIGINT`, `DECIMAL`, `VARCHAR`, `DATE`, `TIMESTAMP`, `BOOLEAN`, and `TEXT` declarations. `order_promotions` uses `(order_id, promotion_id)` as its composite key. No additional required tables or final-table columns are defined.
+The analysis was structured into the following modules:
 
-## Generation Order
+### 1. Data Quality & Schema
 
-1. Markets and cities
-2. Users, addresses, restaurants, and delivery partners
-3. Promotions and restaurant availability
-4. Internal user behavior profiles
-5. Chunked orders and order items
-6. Delivery events
-7. Ratings, issues, and refunds
-8. Order promotions and order financials
-9. Validation and CSV export
+Validated dataset structure, relationships, completeness, and analytical assumptions.
 
-Foreign keys are selected from entity pools constrained by city, lifecycle dates, eligibility, and service area. Dependent tables are generated only after their parent tables exist.
+### 2. Marketplace Health
 
-Stage 2 partner allocation uses city demand weighted by `population * sqrt(population_density)`, then applies configured market partner density and a bounded restaurant-supply adjustment: `partner_weight = demand * partner_density * (0.75 + 0.25 * restaurant_density)`. This keeps partner supply related to population, density, expected demand, and restaurant supply without making any market outcome deterministic. The generated latent profiles are persisted separately in `data/processed/user_profiles.parquet`, `data/processed/restaurant_profiles.parquet`, and `data/processed/partner_profiles.parquet`; they are internal artifacts and are not raw CSV tables.
+Analyzed:
 
-Stage 3 restaurant availability uses four snapshots per restaurant per week: Wednesday lunch, Wednesday dinner, Saturday lunch, and Saturday dinner. This produces about 5 million rows at the configured scale, captures weekday/weekend and lunch/dinner operational variation, and gives future orders a compact nearest-window mapping without generating hourly rows for every restaurant.
+- Order volume
+- Active users
+- Orders per active user
+- Delivery and cancellation rates
+- Restaurant supply
+- Marketplace concentration
+- Contribution margin
 
-## Reproducibility and Scale
+### 3. Customer Behavior
 
-The initial configuration is:
+Analyzed customer ordering patterns and engagement across the marketplace.
 
-- Master seed: `20260820`
-- Users: `55,000`
-- Restaurants: `12,000`
-- Delivery partners: `12,000`
-- Orders: `500,000`
-- Date range: `2024-01-01` through `2025-12-31`
-- Generation chunk size: `50,000` orders
+### 4. Restaurant Performance
 
-Each module receives a deterministic NumPy random stream derived from the master seed. The eventual implementation will use vectorized NumPy/pandas operations and bounded chunks rather than creating all transactional data in one in-memory operation.
+Evaluated restaurant-level order volume and marketplace contribution.
 
-## Validation Approach
+### 5. Delivery Operations
 
-Before export, validation will check required columns, primary-key uniqueness, foreign-key membership, lifecycle and event timestamps, promotion eligibility, refund bounds, order-item ownership, financial reconciliation, controlled edge-case rates, and distribution summaries. The validation layer is designed to identify unrealistic output without assuming which market performs best.
+Decomposed delivery time across operational stages:
 
-## Assumptions
+- Restaurant preparation
+- Partner assignment
+- Post-pickup travel
 
-The original Uber Eats Dataset Generation Specification is the authoritative schema source. `src/schemas.py` mirrors its complete column lists, nullability, SQL types, composite key, and controlled vocabularies; latent behavioral variables remain internal to the generator.
+### 6. Customer Experience
 
-## Setup
+Analyzed:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m compileall -q src
-python -m src.main
-```
+- Ratings
+- Delivery lateness
+- Customer issues
+- Refund behavior
 
-The final command only prints the planned pipeline at this stage; it does not generate data.
+### 7. Promotions
 
-Partner supply is allocated from the same population and density demand base used for users, adjusted by configured partner density and restaurant-supply priors. This prevents lower-density markets from receiving disproportionate partner supply merely because partners used a weaker density exponent.
+Evaluated promotion usage and its relationship with order economics.
+
+### 8. Retention & Cohorts
+
+Analyzed customer retention and repeat behavior using cohort-based metrics.
+
+### 9. Unit Economics
+
+Investigated contribution margin and the characteristics of negative-margin orders.
+
+### 10. Root Cause Analysis
+
+Combined customer experience, operational, promotional, and financial evidence to identify the strongest business hypotheses.
+
+---
+
+## Key Findings
+
+### Delivery reliability affects customer experience
+
+Late orders received lower average ratings:
+
+| Order Type | Average Rating |
+|---|---:|
+| Late | 3.97 |
+| On-time / early | 4.33 |
+
+However, first-order lateness showed almost no aggregate difference in 90-day repeat behavior in the analyzed sample.
+
+This suggests that delivery lateness is clearly associated with customer sentiment, but should not automatically be treated as the primary aggregate retention driver.
+
+---
+
+### Restaurant preparation is the strongest operational bottleneck
+
+Observed delivery-time decomposition:
+
+| Stage | Approx. Time |
+|---|---:|
+| Restaurant preparation | 25.2 min |
+| Partner assignment | 6.1 min |
+| Post-pickup travel | 4.8 min |
+
+Restaurant preparation represents the largest component of the observed delivery process.
+
+This makes restaurant-level preparation-time segmentation an important next investigation.
+
+---
+
+### Promotions are associated with weaker unit economics
+
+Average contribution margin:
+
+| Order Type | Contribution Margin |
+|---|---:|
+| Promoted | -11.12 |
+| Organic | -8.38 |
+
+This is an observed association, not a causal estimate.
+
+The next step should be to evaluate promotion effectiveness using customer segmentation and incremental behavior.
+
+---
+
+### Delivery-partner cost is higher among negative-margin orders
+
+Average delivery-partner cost:
+
+| Order Group | Partner Cost |
+|---|---:|
+| Negative-margin orders | 16.85 |
+| Non-negative-margin orders | 8.79 |
+
+This indicates that delivery-partner cost is an important candidate driver of poor order-level economics.
+
+---
+
+### Marketplace concentration is relatively low
+
+The top ten restaurants account for approximately 1.91% of all orders in the generated dataset.
+
+This suggests that overall marketplace volume is not highly dependent on a very small group of restaurants.
+
+---
+
+## Business Recommendations
+
+The analysis leads to five major recommendation areas:
+
+### P1 — Reduce restaurant preparation time
+
+Identify restaurants, cuisines, and markets with unusually high preparation times and reduce operational bottlenecks.
+
+### P1 — Improve delivery reliability
+
+Focus on reducing severe and repeated lateness while measuring the resulting impact on customer experience.
+
+### P1 — Improve negative-margin economics
+
+Decompose loss-making orders by partner cost, promotion cost, order value, distance, and market to identify controllable cost drivers.
+
+### P1 — Improve promotion efficiency
+
+Move from broad discounting toward targeted promotions based on incremental customer value and retention.
+
+### P2 — Use market-level segmentation
+
+Prioritize markets based on multiple dimensions including demand, reliability, supply, retention, cancellation rate, and contribution margin.
+
+---
+
+## Technical Stack
+
+- SQL
+- DuckDB
+- Python
+- CSV
+- Git
+- GitHub
+- Cohort analysis
+- Window functions
+- CTEs
+- Aggregations
+- Root cause analysis
+- Product analytics
+- Marketplace analytics
+- Unit economics
+
+---
+
+## Repository Structure
+
+```text
+data/        → Synthetic raw datasets
+docs/        → Analytical findings and recommendations
+notebooks/   → Exploratory analysis
+sql/         → Analytical SQL modules
+src/         → Data generation / supporting code
